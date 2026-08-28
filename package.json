@@ -1,0 +1,13 @@
+{
+  "name": "monapay-connectors",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./test.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test.js"
+  }
+}

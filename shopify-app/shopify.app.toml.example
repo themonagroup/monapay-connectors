@@ -1,0 +1,18 @@
+# File tham khảo. Dùng Shopify CLI tạo file thật rồi đối chiếu schema hiện hành.
+client_id = "SHOPIFY_API_KEY"
+name = "MONA Pay"
+application_url = "https://shopify-app.example.com"
+embedded = false
+
+[auth]
+redirect_urls = ["https://shopify-app.example.com/auth/callback"]
+
+[access_scopes]
+scopes = "read_orders,write_orders"
+
+[webhooks]
+api_version = "2026-07"
+
+[[webhooks.subscriptions]]
+topics = ["orders/create"]
+uri = "/webhooks/orders-create"

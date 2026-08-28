@@ -1,0 +1,6 @@
+{
+  "customer-0001": {
+    "memberId": "REPLACE_WITH_GHOST_MEMBER_UUID",
+    "expectedAmount": 2500000
+  }
+}

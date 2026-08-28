@@ -1,0 +1,8 @@
+{
+  "name": "ghost-monapay-webhook",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zero-dependency MONA Pay webhook bridge for Ghost members",
+  "scripts": {"start": "node server.js", "test": "node --test"},
+  "engines": {"node": ">=18"}
+}

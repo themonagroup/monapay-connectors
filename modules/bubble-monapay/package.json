@@ -1,0 +1,7 @@
+{
+  "name": "bubble-monapay-webhook-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {"start": "node hmac-proxy.js", "test": "node --test"},
+  "engines": {"node": ">=18"}
+}

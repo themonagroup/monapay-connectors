@@ -1,0 +1,50 @@
+{
+  "$schema": "https://monapay.vn/schemas/bubble-api-connector-reference-v1.json",
+  "format": "documentation-reference",
+  "warning": "Bubble does not publish a stable portable API Connector export schema; configure these calls manually and keep private parameters private.",
+  "api": "MONA Pay",
+  "baseUrl": "https://api.monapay.vn",
+  "calls": [
+    {
+      "name": "Login",
+      "useAs": "Action",
+      "method": "POST",
+      "path": "/api/v1/client/login",
+      "headers": {"Content-Type": "application/json", "Accept": "application/json"},
+      "body": {"username": "<private:MONAPAY_USERNAME>", "password": "<private:MONAPAY_PASSWORD>"},
+      "returns": {"tokenPath": "data.access_token", "expiresPath": "data.expires_in"}
+    },
+    {
+      "name": "Generate VietQR",
+      "useAs": "Action",
+      "method": "POST",
+      "path": "/api/v1/acb/qr-payment/generate",
+      "headers": {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": "Bearer <private:access_token>",
+        "X-Client-Secret": "<private:MONAPAY_CLIENT_SECRET>"
+      },
+      "body": {
+        "ownerNumber": "<private:ownerNumber>",
+        "ownerType": "<private:PER|ORG>",
+        "merchantId": "<private:merchantId>",
+        "terminalId": "<private:terminalId>",
+        "orderId": "<dynamic:orderId>",
+        "virtualAccountPrefix": "<private:virtualAccountPrefix>",
+        "beneficiaryName": "<private:beneficiaryName>",
+        "amount": "<dynamic:integer <= 1000000000>",
+        "description": "<dynamic:max 255 chars>"
+      },
+      "returns": {"qrPayloadPath": "data.qr_data_url", "qrIdPath": "data.id", "virtualAccountPath": "data.virtual_account_number"}
+    },
+    {
+      "name": "Recent transactions",
+      "useAs": "Data",
+      "method": "GET",
+      "path": "/api/v1/acb/virtual-account/transactions?virtual_account_number=<dynamic:va>&page=1&limit=10",
+      "headers": {"Accept": "application/json", "Authorization": "Bearer <private:access_token>"},
+      "returns": {"itemsPath": "data.data", "pagePath": "data.current_page", "lastPagePath": "data.last_page"}
+    }
+  ]
+}

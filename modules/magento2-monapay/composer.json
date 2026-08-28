@@ -1,0 +1,11 @@
+{
+  "name": "mona/magento2-monapay",
+  "description": "MONA Pay VietQR payment method for Magento 2",
+  "type": "magento2-module",
+  "version": "0.1.0",
+  "license": "proprietary",
+  "autoload": {
+    "files": ["registration.php"],
+    "psr-4": {"Mona\\MonaPay\\": ""}
+  }
+}

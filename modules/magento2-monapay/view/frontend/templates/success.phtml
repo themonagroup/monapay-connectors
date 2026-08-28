@@ -1,0 +1,17 @@
+<?php $qr = $block->getPaymentData(); ?>
+<?php if (!empty($qr)): ?>
+<section class="monapay-payment" aria-labelledby="monapay-title">
+    <h2 id="monapay-title"><?= $block->escapeHtml(__('Thanh toán MONA Pay VietQR')) ?></h2>
+    <?php if (!empty($qr['error'])): ?>
+        <p><?= $block->escapeHtml(__('Không thể tạo QR: %1', $qr['error'])) ?></p>
+    <?php else: ?>
+        <p><?= $block->escapeHtml(__('Mở ứng dụng ngân hàng và dùng chức năng quét QR.')) ?></p>
+        <div class="monapay-qr-placeholder" data-monapay-qr="<?= $block->escapeHtmlAttr($qr['qr_data_url'] ?? '') ?>">
+            <label><?= $block->escapeHtml(__('Chuỗi VietQR (EMVCo)')) ?></label>
+            <textarea readonly rows="4" style="width:100%" aria-label="VietQR payload"><?= $block->escapeHtml($qr['qr_data_url'] ?? '') ?></textarea>
+        </div>
+        <p><?= $block->escapeHtml(__('Số tài khoản ảo: %1', $qr['virtual_account_number'] ?? '—')) ?></p>
+        <!-- TODO: kiểm với theme/renderer QR Magento đang dùng; qr_data_url là payload EMVCo, không phải URL ảnh. -->
+    <?php endif; ?>
+</section>
+<?php endif; ?>

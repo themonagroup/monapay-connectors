@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="payment">
+            <group id="monapay" translate="label" type="text" sortOrder="180" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>MONA Pay VietQR</label>
+                <field id="active" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1"><label>Enabled</label><source_model>Magento\Config\Model\Config\Source\Yesno</source_model></field>
+                <field id="title" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1"><label>Checkout title</label></field>
+                <field id="base_url" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1"><label>API base URL</label></field>
+                <field id="username" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1"><label>MONA Pay username</label></field>
+                <field id="password" translate="label" type="obscure" sortOrder="50" showInDefault="1" showInWebsite="1"><label>MONA Pay password</label><backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model></field>
+                <field id="client_secret" translate="label" type="obscure" sortOrder="60" showInDefault="1" showInWebsite="1"><label>Client Secret</label><backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model></field>
+                <field id="webhook_secret" translate="label" type="obscure" sortOrder="70" showInDefault="1" showInWebsite="1"><label>Webhook HMAC secret</label><backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model><comment>Use the same secret in the MONA Pay HMAC_SHA256 webhook config.</comment></field>
+                <field id="owner_number" translate="label" type="text" sortOrder="80" showInDefault="1" showInWebsite="1"><label>ACB ownerNumber</label></field>
+                <field id="owner_type" translate="label" type="select" sortOrder="90" showInDefault="1" showInWebsite="1"><label>ownerType</label><source_model>Mona\MonaPay\Model\Config\Source\OwnerType</source_model></field>
+                <field id="merchant_id" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1"><label>merchantId</label></field>
+                <field id="terminal_id" translate="label" type="text" sortOrder="110" showInDefault="1" showInWebsite="1"><label>terminalId</label></field>
+                <field id="virtual_account_prefix" translate="label" type="text" sortOrder="120" showInDefault="1" showInWebsite="1"><label>virtualAccountPrefix</label></field>
+                <field id="beneficiary_name" translate="label" type="text" sortOrder="130" showInDefault="1" showInWebsite="1"><label>beneficiaryName</label></field>
+            </group>
+        </section>
+    </system>
+</config>

@@ -1,7 +1,8 @@
 {
-  "name": "MONA Pay VietQR",
+  "name": "MONA Pay Hosted Checkout",
+  "description": "Hosted checkout MONA Pay cho OpenCart 4.1, có sandbox và webhook HMAC.",
   "code": "monapay",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "The MONA Group",
   "link": "https://monapay.vn"
 }

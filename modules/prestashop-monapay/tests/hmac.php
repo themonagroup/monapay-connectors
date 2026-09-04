@@ -1,15 +1,27 @@
 <?php
+
 require_once dirname(__DIR__) . '/classes/MonaPayHmac.php';
 
-$body = '{"amount":2500000,"description":"DH123","transaction_code":"FT26240001234","account_number":"MONA00000123","type":"income"}';
-$timestamp = '1756355400';
+$body = '{"event":"CHECKOUT_PAID","checkout_id":"checkout-1","order_code":"DH123","transaction_code":"FT26240001234"}';
+$timestamp = '1788487200';
 $secret = '0123456789abcdef0123456789abcdef';
-$known = 'sha256=c7b09ff9e0e8eaee7d31e9c35f08fb41222543b8d6e793f1c4eed5b23008d28a';
-$checks = [
-    'known vector' => MonaPayHmac::verify($body, $timestamp, $known, $secret, 1756355400),
-    'raw body mutation' => !MonaPayHmac::verify($body . ' ', $timestamp, $known, $secret, 1756355400),
-    'timestamp window' => !MonaPayHmac::verify($body, $timestamp, $known, $secret, 1756355701),
-    'bad signature' => !MonaPayHmac::verify($body, $timestamp, 'sha256=' . str_repeat('0', 64), $secret, 1756355400),
-];
-foreach ($checks as $name => $ok) fwrite($ok ? STDOUT : STDERR, ($ok ? 'PASS ' : 'FAIL ') . $name . PHP_EOL);
+$webhookSignature = 'sha256=' . hash_hmac('sha256', $timestamp . '.' . $body, $secret);
+$returnSignature = hash_hmac('sha256', 'checkout-1|DH123|paid|' . $timestamp, $secret);
+
+$checks = array(
+    'webhook known vector' => MonaPayHmac::verifyWebhook($body, $timestamp, $webhookSignature, $secret, 1788487200),
+    'webhook raw body mutation' => !MonaPayHmac::verifyWebhook($body . ' ', $timestamp, $webhookSignature, $secret, 1788487200),
+    'webhook timestamp boundary' => MonaPayHmac::verifyWebhook($body, $timestamp, $webhookSignature, $secret, 1788487500),
+    'webhook timestamp expired' => !MonaPayHmac::verifyWebhook($body, $timestamp, $webhookSignature, $secret, 1788487501),
+    'webhook bad prefix' => !MonaPayHmac::verifyWebhook($body, $timestamp, substr($webhookSignature, 7), $secret, 1788487200),
+    'return valid' => MonaPayHmac::verifyReturn('checkout-1', 'DH123', 'paid', $timestamp, $returnSignature, $secret, 1788487200),
+    'return changed order' => !MonaPayHmac::verifyReturn('checkout-1', 'DH124', 'paid', $timestamp, $returnSignature, $secret, 1788487200),
+    'return unsigned cancel rejected' => !MonaPayHmac::verifyReturn('checkout-1', 'DH123', 'cancelled', $timestamp, $returnSignature, $secret, 1788487200),
+    'return sha256 prefix rejected' => !MonaPayHmac::verifyReturn('checkout-1', 'DH123', 'paid', $timestamp, 'sha256=' . $returnSignature, $secret, 1788487200),
+);
+
+foreach ($checks as $name => $ok) {
+    fwrite($ok ? STDOUT : STDERR, ($ok ? 'PASS ' : 'FAIL ') . $name . PHP_EOL);
+}
+
 exit(in_array(false, $checks, true) ? 1 : 0);

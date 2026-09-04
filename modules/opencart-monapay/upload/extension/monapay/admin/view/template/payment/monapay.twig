@@ -1,0 +1,61 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end">
+        <button type="submit" form="form-monapay" class="btn btn-primary"><i class="fa-solid fa-save"></i> {{ button_save }}</button>
+        <a href="{{ back }}" class="btn btn-light"><i class="fa-solid fa-reply"></i> {{ button_cancel }}</a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+    </div>
+  </div>
+  <div class="container-fluid">
+    {% if error_warning %}<div class="alert alert-danger alert-dismissible"><i class="fa-solid fa-circle-exclamation"></i> {{ error_warning }}</div>{% endif %}
+    <div class="card">
+      <div class="card-header"><i class="fa-solid fa-pen-to-square"></i> {{ text_edit }}</div>
+      <div class="card-body">
+        <form id="form-monapay" action="{{ save }}" method="post">
+          {% set fields = {
+            'title': entry_title,
+            'base_url': entry_base_url,
+            'client_id': entry_client_id,
+            'client_secret': entry_client_secret,
+            'webhook_secret': entry_webhook_secret,
+            'return_signature_secret': entry_return_signature_secret
+          } %}
+          {% for key, label in fields %}
+            <div class="row mb-3">
+              <label class="col-sm-3 col-form-label" for="input-{{ key }}">{{ label }}</label>
+              <div class="col-sm-9">
+                <input id="input-{{ key }}" class="form-control" name="payment_monapay_{{ key }}" value="{{ attribute(_context, 'payment_monapay_' ~ key) }}" {% if key in ['client_secret','webhook_secret','return_signature_secret'] %}type="password" autocomplete="new-password"{% else %}type="text"{% endif %}>
+                {% if key == 'webhook_secret' %}<div class="form-text">{{ help_webhook }} <code>{{ webhook_url }}</code></div>{% endif %}
+                {% if key == 'return_signature_secret' %}<div class="form-text">{{ help_return_signature }}</div>{% endif %}
+              </div>
+            </div>
+          {% endfor %}
+          <div class="row mb-3">
+            <label class="col-sm-3 col-form-label" for="input-payment-mode">{{ entry_payment_mode }}</label>
+            <div class="col-sm-9"><select id="input-payment-mode" class="form-select" name="payment_monapay_payment_mode"><option value="redirect" selected>{{ text_redirect }}</option></select></div>
+          </div>
+          <div class="row mb-3">
+            <label class="col-sm-3 col-form-label" for="input-order-status">{{ entry_order_status }}</label>
+            <div class="col-sm-9"><select id="input-order-status" class="form-select" name="payment_monapay_order_status_id">{% for status in order_statuses %}<option value="{{ status.order_status_id }}" {% if status.order_status_id == payment_monapay_order_status_id %}selected{% endif %}>{{ status.name }}</option>{% endfor %}</select></div>
+          </div>
+          <div class="row mb-3">
+            <label class="col-sm-3 col-form-label" for="input-sandbox">{{ entry_sandbox }}</label>
+            <div class="col-sm-9"><select id="input-sandbox" class="form-select" name="payment_monapay_sandbox"><option value="1" {% if payment_monapay_sandbox %}selected{% endif %}>{{ text_enabled }}</option><option value="0" {% if not payment_monapay_sandbox %}selected{% endif %}>{{ text_disabled }}</option></select><div class="form-text">{{ help_sandbox }}</div></div>
+          </div>
+          <div class="row mb-3">
+            <label class="col-sm-3 col-form-label" for="input-status">{{ entry_status }}</label>
+            <div class="col-sm-9"><select id="input-status" class="form-select" name="payment_monapay_status"><option value="1" {% if payment_monapay_status %}selected{% endif %}>{{ text_enabled }}</option><option value="0" {% if not payment_monapay_status %}selected{% endif %}>{{ text_disabled }}</option></select></div>
+          </div>
+          <div class="row mb-3">
+            <label class="col-sm-3 col-form-label" for="input-sort-order">{{ entry_sort_order }}</label>
+            <div class="col-sm-9"><input id="input-sort-order" class="form-control" type="number" name="payment_monapay_sort_order" value="{{ payment_monapay_sort_order }}"></div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{{ footer }}

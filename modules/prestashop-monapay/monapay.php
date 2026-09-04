@@ -77,12 +77,15 @@ class MonaPay extends PaymentModule
         $output = '';
 
         if (Tools::isSubmit('submitMonaPay')) {
+            $clientSecret = trim((string) Tools::getValue(self::CONFIG_CLIENT_SECRET));
+            $webhookSecret = trim((string) Tools::getValue(self::CONFIG_WEBHOOK_SECRET));
+            $returnSecret = trim((string) Tools::getValue(self::CONFIG_RETURN_SECRET));
             $values = array(
                 self::CONFIG_BASE_URL => rtrim((string) Tools::getValue(self::CONFIG_BASE_URL), '/'),
                 self::CONFIG_CLIENT_ID => trim((string) Tools::getValue(self::CONFIG_CLIENT_ID)),
-                self::CONFIG_CLIENT_SECRET => trim((string) Tools::getValue(self::CONFIG_CLIENT_SECRET)),
-                self::CONFIG_WEBHOOK_SECRET => trim((string) Tools::getValue(self::CONFIG_WEBHOOK_SECRET)),
-                self::CONFIG_RETURN_SECRET => trim((string) Tools::getValue(self::CONFIG_RETURN_SECRET)),
+                self::CONFIG_CLIENT_SECRET => $clientSecret !== '' ? $clientSecret : (string) Configuration::get(self::CONFIG_CLIENT_SECRET),
+                self::CONFIG_WEBHOOK_SECRET => $webhookSecret !== '' ? $webhookSecret : (string) Configuration::get(self::CONFIG_WEBHOOK_SECRET),
+                self::CONFIG_RETURN_SECRET => $returnSecret !== '' ? $returnSecret : (string) Configuration::get(self::CONFIG_RETURN_SECRET),
                 self::CONFIG_SANDBOX => (int) ((bool) Tools::getValue(self::CONFIG_SANDBOX)),
             );
 
@@ -239,7 +242,8 @@ class MonaPay extends PaymentModule
     public function getCheckoutByOrderId($idOrder)
     {
         $row = Db::getInstance()->getRow(
-            'SELECT * FROM `' . _DB_PREFIX_ . 'monapay_checkout` WHERE `id_order` = ' . (int) $idOrder . ' LIMIT 1'
+            'SELECT * FROM `' . _DB_PREFIX_ . 'monapay_checkout` WHERE `id_order` = ' . (int) $idOrder . '',
+            false
         );
 
         return is_array($row) ? $row : false;
@@ -253,7 +257,8 @@ class MonaPay extends PaymentModule
         }
 
         $row = Db::getInstance()->getRow(
-            'SELECT * FROM `' . _DB_PREFIX_ . "monapay_checkout` WHERE `checkout_id` = '" . pSQL($checkoutId) . "' LIMIT 1"
+            'SELECT * FROM `' . _DB_PREFIX_ . "monapay_checkout` WHERE `checkout_id` = '" . pSQL($checkoutId) . "'",
+            false
         );
 
         return is_array($row) ? $row : false;
@@ -293,6 +298,8 @@ class MonaPay extends PaymentModule
             || $transactionCode === ''
             || strlen($transactionCode) > 191
             || $checkoutId === ''
+            || strlen($checkoutId) > 64
+            || !in_array($event, array('CHECKOUT_PAID', 'RETURN_RECONCILED'), true)
             || $paidAmount < $expectedAmount
         ) {
             return 'invalid';
@@ -307,33 +314,49 @@ class MonaPay extends PaymentModule
         $db->execute('START TRANSACTION');
 
         try {
-            $existing = $db->getRow(
-                'SELECT `id_order` FROM `' . _DB_PREFIX_ . "monapay_transaction` WHERE `transaction_code` = '" . pSQL($transactionCode) . "' FOR UPDATE"
+            $existingRows = $db->executeS(
+                'SELECT `id_order` FROM `' . _DB_PREFIX_ . "monapay_transaction` WHERE `transaction_code` = '" . pSQL($transactionCode) . "' FOR UPDATE",
+                true
             );
+            $existing = (is_array($existingRows) && count($existingRows)) ? $existingRows[0] : false;
             if ($existing && (int) $existing['id_order'] !== (int) $order->id) {
                 throw new RuntimeException('Mã giao dịch đã thuộc một đơn hàng khác.');
+            }
+
+            if ($existing) {
+                $order = new Order((int) $order->id);
+                if (!Validate::isLoadedObject($order) || $order->module !== $this->name) {
+                    throw new RuntimeException('Không thể tải lại đơn hàng MONA Pay.');
+                }
             }
 
             if (!$existing) {
                 $inserted = $db->insert('monapay_transaction', array(
                     'transaction_code' => pSQL($transactionCode),
                     'id_order' => (int) $order->id,
-                    'checkout_id' => pSQL($checkoutId),
-                    'event_name' => pSQL($event),
-                    'paid_amount' => $paidAmount,
                     'created_at' => date('Y-m-d H:i:s'),
                 ));
                 if (!$inserted) {
                     throw new RuntimeException('Không thể lưu mã giao dịch MONA Pay.');
+                }
+
+                if (!$order->addOrderPayment($expectedAmount, $this->displayName, $transactionCode)) {
+                    throw new RuntimeException('Không thể ghi nhận payment MONA Pay vào đơn hàng.');
                 }
             }
 
             if ((int) $order->current_state !== (int) Configuration::get('PS_OS_PAYMENT')) {
                 $history = new OrderHistory();
                 $history->id_order = (int) $order->id;
-                $history->changeIdOrderState((int) Configuration::get('PS_OS_PAYMENT'), (int) $order->id);
-                if (!$history->addWithemail(true, array('{transaction_id}' => $transactionCode))) {
+                $history->changeIdOrderState((int) Configuration::get('PS_OS_PAYMENT'), $order, true);
+                // Không gắn thanh toán với việc gửi email: mail lỗi (SMTP) vẫn phải đổi trạng thái đơn.
+                if (!$history->add()) {
                     throw new RuntimeException('Không thể cập nhật trạng thái đơn hàng.');
+                }
+                try {
+                    $history->sendEmail($order, array('{transaction_id}' => $transactionCode));
+                } catch (Throwable $mailError) {
+                    $this->log('Không gửi được email trạng thái đơn #' . (int) $order->id . ': ' . $mailError->getMessage(), 2);
                 }
             }
 
@@ -471,13 +494,9 @@ class MonaPay extends PaymentModule
             'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'monapay_transaction` (
                 `transaction_code` varchar(191) NOT NULL,
                 `id_order` int unsigned NOT NULL,
-                `checkout_id` varchar(64) NOT NULL,
-                `event_name` varchar(32) NOT NULL,
-                `paid_amount` bigint unsigned NOT NULL,
                 `created_at` datetime NOT NULL,
                 PRIMARY KEY (`transaction_code`),
-                KEY `id_order` (`id_order`),
-                KEY `checkout_id` (`checkout_id`)
+                KEY `id_order` (`id_order`)
             ) ENGINE=' . $engine . ' DEFAULT CHARSET=utf8mb4',
             'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'monapay_token` (
                 `cache_key` char(64) NOT NULL,
@@ -537,9 +556,9 @@ class MonaPay extends PaymentModule
                 'input' => array(
                     array('type' => 'text', 'label' => $this->l('Base URL'), 'name' => self::CONFIG_BASE_URL, 'required' => true),
                     array('type' => 'text', 'label' => $this->l('Client ID'), 'name' => self::CONFIG_CLIENT_ID, 'required' => true),
-                    array('type' => 'password', 'label' => $this->l('Client Secret'), 'name' => self::CONFIG_CLIENT_SECRET, 'required' => true),
-                    array('type' => 'password', 'label' => $this->l('Webhook Secret'), 'name' => self::CONFIG_WEBHOOK_SECRET, 'required' => true),
-                    array('type' => 'password', 'label' => $this->l('Return Signature Secret'), 'name' => self::CONFIG_RETURN_SECRET, 'required' => true),
+                    array('type' => 'password', 'label' => $this->l('Client Secret'), 'name' => self::CONFIG_CLIENT_SECRET, 'desc' => $this->l('Để trống khi lưu để giữ secret hiện tại.')),
+                    array('type' => 'password', 'label' => $this->l('Webhook Secret'), 'name' => self::CONFIG_WEBHOOK_SECRET, 'desc' => $this->l('Secret HMAC của cấu hình webhook. Để trống để giữ giá trị hiện tại.')),
+                    array('type' => 'password', 'label' => $this->l('Return Signature Secret'), 'name' => self::CONFIG_RETURN_SECRET, 'desc' => $this->l('Secret trong hồ sơ Trang thanh toán. Đây không phải webhook secret.')),
                     array(
                         'type' => 'switch',
                         'label' => $this->l('Chế độ sandbox'),
@@ -568,7 +587,11 @@ class MonaPay extends PaymentModule
         $helper->tpl_vars = array('fields_value' => array());
 
         foreach (self::$configurationKeys as $key) {
-            $helper->tpl_vars['fields_value'][$key] = Configuration::get($key);
+            $helper->tpl_vars['fields_value'][$key] = in_array($key, array(
+                self::CONFIG_CLIENT_SECRET,
+                self::CONFIG_WEBHOOK_SECRET,
+                self::CONFIG_RETURN_SECRET,
+            ), true) ? '' : Configuration::get($key);
         }
 
         return $helper->generateForm(array($form));

@@ -83,7 +83,11 @@ class MonaPayValidationModuleFrontController extends ModuleFrontController
             );
             Tools::redirect((string) $checkout['checkout_url']);
         } catch (Throwable $exception) {
-            $this->module->saveCheckoutError((int) $order->id, $attempt, $exception->getMessage());
+            try {
+                $this->module->saveCheckoutError((int) $order->id, $attempt, $exception->getMessage());
+            } catch (Throwable $storageException) {
+                $this->module->log('Không lưu được lỗi checkout đơn #' . (int) $order->id . ': ' . $storageException->getMessage(), 3);
+            }
             $this->module->log('Tạo checkout cho đơn #' . (int) $order->id . ' thất bại: ' . $exception->getMessage(), 3);
             Tools::redirect($this->module->orderConfirmationUrl($order, array('monapay_result' => 'failed')));
         }

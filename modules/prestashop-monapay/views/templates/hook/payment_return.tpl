@@ -5,15 +5,13 @@
     <p class="alert alert-info">{l s='Đơn này dùng sandbox MONA Pay; không chuyển tiền thật vào mã QR thử nghiệm.' mod='monapay'}</p>
   {/if}
 
-  {if $monapay_status === 'paid'}
+  {if $monapay_status == 'paid'}
     <p class="alert alert-success">{l s='MONA Pay đã xác nhận thanh toán. Cửa hàng đang xử lý đơn của bạn.' mod='monapay'}</p>
-  {elseif $monapay_status === 'cancelled'}
+  {elseif $monapay_status == 'cancelled'}
     <p class="alert alert-warning">{l s='Bạn đã đóng trang thanh toán. Đơn vẫn được giữ ở trạng thái chờ; hãy đặt lại đơn nếu muốn tạo phiên thanh toán mới.' mod='monapay'}</p>
-  {elseif $monapay_status === 'failed'}
+  {elseif $monapay_status == 'failed'}
     <p class="alert alert-danger">{l s='Chưa thể tạo trang thanh toán MONA Pay cho đơn này.' mod='monapay'}</p>
-    {if $monapay_error}
-      <p>{$monapay_error|escape:'htmlall':'UTF-8'}</p>
-    {/if}
+    <p>{l s='Vui lòng liên hệ cửa hàng và cung cấp mã đơn để được hỗ trợ.' mod='monapay'}</p>
   {else}
     <p class="alert alert-warning">{l s='Đơn đang chờ MONA Pay xác nhận thanh toán.' mod='monapay'}</p>
     {if $monapay_checkout_url}

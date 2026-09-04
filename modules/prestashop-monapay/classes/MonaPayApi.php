@@ -49,7 +49,11 @@ final class MonaPayApi
     public static function clearTokenCache()
     {
         if (defined('_DB_PREFIX_')) {
-            Db::getInstance()->execute('DELETE FROM `' . _DB_PREFIX_ . 'monapay_token`');
+            $table = _DB_PREFIX_ . 'monapay_token';
+            $exists = Db::getInstance()->getValue("SHOW TABLES LIKE '" . pSQL($table) . "'", false);
+            if ($exists) {
+                Db::getInstance()->execute('DELETE FROM `' . bqSQL($table) . '`');
+            }
         }
     }
 
@@ -84,7 +88,8 @@ final class MonaPayApi
     {
         $cacheKey = $this->tokenCacheKey();
         $row = Db::getInstance()->getRow(
-            'SELECT `access_token`, `expires_at` FROM `' . _DB_PREFIX_ . "monapay_token` WHERE `cache_key` = '" . pSQL($cacheKey) . "' LIMIT 1"
+            'SELECT `access_token`, `expires_at` FROM `' . _DB_PREFIX_ . "monapay_token` WHERE `cache_key` = '" . pSQL($cacheKey) . "'",
+            false
         );
         if (is_array($row) && !empty($row['access_token']) && (int) $row['expires_at'] > time()) {
             return (string) $row['access_token'];

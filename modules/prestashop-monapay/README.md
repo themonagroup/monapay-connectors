@@ -1,21 +1,81 @@
-# MONA Pay cho PrestaShop (scaffold P2)
+# MONA Pay Hosted Checkout cho PrestaShop 8
 
-Module PrestaShop 1.7.8+/8 thêm lựa chọn thanh toán VietQR cho đơn VND, tạo order ở trạng thái chờ, gọi MONA Pay để tạo QR và nhận webhook tại `/module/monapay/webhook`.
+Payment module cho PrestaShop 8.x. Module tạo đơn VND ở trạng thái **Chờ
+thanh toán MONA Pay**, gọi hosted checkout rồi chuyển khách sang
+`checkout_url` tại `pay.monapay.vn`.
+
+## Luồng thanh toán
+
+1. `hookPaymentOptions()` thêm phương thức **Thanh toán qua MONA Pay**.
+2. `controllers/front/validation.php` tạo order chờ thanh toán, lấy OAuth
+   token bằng client credentials, gọi `POST /api/v1/checkouts` với
+   `Idempotency-Key` và redirect khách sang `checkout_url`.
+3. MONA Pay gọi `/module/monapay/webhook`; module xác minh HMAC-SHA256 trên
+   raw body, cửa sổ timestamp 300 giây, chỉ xử lý `CHECKOUT_PAID` khớp đúng
+   checkout, mã đơn và số tiền.
+4. Module chống trùng bằng primary key `transaction_code`, rồi đổi đơn sang
+   trạng thái PrestaShop **Payment accepted**.
+5. `/module/monapay/return` xác minh chữ ký redirect, gọi lại
+   `GET /api/v1/checkouts/{id}` và chỉ xác nhận đơn khi kết quả server-side là
+   `paid`. Webhook/API là nguồn sự thật; query trên trình duyệt không đủ để
+   giao hàng.
+
+Module dùng ba bảng:
+
+- `ps_monapay_checkout`: ánh xạ order ↔ hosted checkout và trạng thái.
+- `ps_monapay_transaction`: ledger chống xử lý trùng theo
+  `transaction_code`.
+- `ps_monapay_token`: cache access token OAuth đến trước hạn 60 giây.
+
+Hai bảng đầu được giữ lại khi uninstall để không mất dữ liệu đối soát. Bảng
+token và toàn bộ secret cấu hình được xóa.
 
 ## Cài đặt
 
-1. Đặt thư mục này tại `modules/monapay` (đổi tên từ `prestashop-monapay`), rồi cài trong Module Manager.
-2. Configure: nhập Base URL, username/password, Client Secret, HMAC secret và sáu trường QR ACB. Không commit các giá trị này.
-3. Tạo webhook MONA Pay JSON + `HMAC_SHA256` tới URL HTTPS do form config hiển thị, dùng cùng secret.
-4. Test trên staging: đơn VND, payload thử `DUMMY123`, thiếu tiền và gửi lại cùng mã giao dịch.
+Thư mục cài trong PrestaShop bắt buộc tên `monapay`:
 
-Module tạo hai bảng riêng: QR theo order và ledger có primary key `transaction_code`; uninstall cố ý giữ dữ liệu audit. Webhook ký raw body, giới hạn 300 giây, dùng `hash_equals`, chỉ nhận `income` và không đổi trạng thái nếu thiếu tiền.
+```bash
+cp -a prestashop-monapay /var/www/html/modules/monapay
+cd /var/www/html
+php bin/console prestashop:module install monapay --no-interaction
+```
 
-`qr_data_url` là payload EMVCo chứ không phải URL ảnh. Template payment-return hiển thị payload/VA. `TODO: kiểm với theme/renderer QR PrestaShop đang dùng` trước production. Cũng cần kiểm hook order-confirmation, email transition và multi-shop trên đúng phiên bản PrestaShop của cửa hàng.
+Vào Module Manager → MONA Pay → Configure và nhập:
+
+- Base URL: `https://api.monapay.vn`
+- Client ID và Client Secret của API key MONA Pay
+- Webhook Secret của cấu hình webhook HMAC
+- Return Signature Secret trong Cài đặt → Trang thanh toán
+- Sandbox: bật để request tạo checkout có `"sandbox": true`
+
+`Webhook Secret` và `Return Signature Secret` là hai secret khác nhau. Các ô
+secret để trống khi lưu sẽ giữ giá trị hiện tại.
+
+Webhook cần đăng ký trên MONA Pay:
+
+```text
+https://TEN-MIEN/module/monapay/webhook
+```
+
+- Method: `POST`
+- Payload: `application/json`
+- Auth: `HMAC_SHA256`
+- Event cần dùng: `CHECKOUT_PAID`
+
+Return URL được module tự gửi khi tạo checkout:
+
+```text
+https://TEN-MIEN/module/monapay/return
+```
+
+## Kiểm tra tĩnh
 
 ```bash
 find . -name '*.php' -print0 | xargs -0 -n1 php -l
 php tests/hmac.php
 ```
 
-Không chạy API production trong gate. MONA Pay miễn phí hoàn toàn · https://monapay.vn/docs · 1900 636 648 · info@themona.global.
+Sau đó kiểm thử trên staging: checkout guest, sandbox đủ tiền, thiếu tiền,
+gửi lại cùng `transaction_code`, return sai chữ ký và webhook quá 300 giây.
+
+Tài liệu API: https://monapay.vn/docs/api/trang-thanh-toan.md

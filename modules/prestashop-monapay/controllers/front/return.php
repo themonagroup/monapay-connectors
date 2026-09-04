@@ -59,6 +59,8 @@ class MonaPayReturnModuleFrontController extends ModuleFrontController
             $matches = isset($remote['status'], $remote['order_code'])
                 && $remote['status'] === 'paid'
                 && (string) $remote['order_code'] === $orderCode
+                && (!isset($remote['id']) || hash_equals($checkoutId, (string) $remote['id']))
+                && (!isset($remote['currency']) || $remote['currency'] === 'VND')
                 && $remoteAmount === (int) round((float) $order->total_paid_tax_incl)
                 && $paidAmount >= $remoteAmount
                 && $transactionCode !== '';

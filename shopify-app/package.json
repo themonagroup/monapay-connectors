@@ -1,12 +1,13 @@
 {
-  "name": "monapay-shopify-app-scaffold",
-  "version": "0.1.0",
+  "name": "monapay-shopify-app",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test test/app.test.js test/crypto.test.js"
   }
 }

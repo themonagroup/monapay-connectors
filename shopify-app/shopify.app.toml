@@ -1,0 +1,34 @@
+client_id = "REPLACE_WITH_SHOPIFY_API_KEY"
+name = "MONA Pay"
+handle = "mona-pay"
+application_url = "https://shopify.monapay.vn"
+embedded = false
+
+[auth]
+redirect_urls = ["https://shopify.monapay.vn/auth/callback"]
+
+[access_scopes]
+scopes = "read_orders,write_orders"
+
+[webhooks]
+api_version = "2026-07"
+
+[[webhooks.subscriptions]]
+topics = ["orders/create"]
+uri = "/webhooks/orders-create"
+
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "/webhooks/app-uninstalled"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/data_request"]
+uri = "/webhooks/customers-data-request"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/redact"]
+uri = "/webhooks/customers-redact"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["shop/redact"]
+uri = "/webhooks/shop-redact"

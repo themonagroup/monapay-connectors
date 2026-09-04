@@ -1,4 +1,6 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+
+export const SHOP_COOKIE_NAME = '__Host-monapay_shop';
 
 function safeEqual(left, right) {
   const leftBuffer = Buffer.from(String(left));
@@ -28,6 +30,42 @@ export function verifyWebhookHmac(rawBody, received, secret) {
   if (!received) return false;
   const expected = createHmac('sha256', secret).update(rawBody).digest('base64');
   return safeEqual(received, expected);
+}
+
+export function createSignedShopCookie(shop, secret, {
+  now = () => Math.floor(Date.now() / 1_000),
+  ttlSec = 30 * 24 * 60 * 60,
+} = {}) {
+  const normalized = normalizeShop(shop);
+  if (!normalized) throw new Error('Shop không hợp lệ');
+  const payload = Buffer.from(JSON.stringify({
+    shop: normalized,
+    exp: now() + ttlSec,
+    nonce: randomBytes(16).toString('base64url'),
+  })).toString('base64url');
+  const signature = createHmac('sha256', secret).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+}
+
+export function verifySignedShopCookie(value, secret, {
+  now = () => Math.floor(Date.now() / 1_000),
+} = {}) {
+  const [payloadText, signatureText, ...extra] = String(value || '').split('.');
+  if (!payloadText || !signatureText || extra.length) return null;
+  const expected = createHmac('sha256', secret).update(payloadText).digest('base64url');
+  if (!safeEqual(signatureText, expected)) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(payloadText, 'base64url').toString('utf8'));
+    const shop = normalizeShop(payload.shop);
+    if (!shop || !Number.isSafeInteger(payload.exp) || payload.exp < now()) return null;
+    return { ...payload, shop };
+  } catch {
+    return null;
+  }
+}
+
+export function csrfTokenForCookie(cookieValue, secret) {
+  return createHmac('sha256', secret).update(`settings:${cookieValue}`).digest('base64url');
 }
 
 function decodeBase64Url(value) {

@@ -1,0 +1,36 @@
+[Unit]
+Description=MONA Pay Shopify application
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=monapay-shopify
+Group=monapay-shopify
+WorkingDirectory=/opt/monapay-shopify
+EnvironmentFile=/etc/monapay-shopify.env
+ExecStart=/usr/bin/node /opt/monapay-shopify/server.js
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+UMask=0077
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadWritePaths=/var/lib/monapay-shopify
+
+[Install]
+WantedBy=multi-user.target

@@ -1,6 +1,6 @@
 # MONA Pay cho Magento 2 (scaffold P2)
 
-Module thêm phương thức chuyển khoản VietQR cho đơn VND, tạo QR động sau checkout và nhận webhook HMAC tại `POST /monapay/webhook/index`. MONA Pay là cổng thanh toán và API ngân hàng của The MONA Group; dịch vụ miễn phí hoàn toàn.
+Module thêm phương thức chuyển khoản VietQR cho đơn VND, tạo QR động sau checkout và nhận webhook HMAC tại `POST /monapay/webhook/index`. MONA Pay là API ngân hàng và dịch vụ xác nhận thanh toán tự động của The MONA Group; dịch vụ miễn phí hoàn toàn.
 
 ## Cài đặt
 
